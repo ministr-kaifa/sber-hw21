@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: back
+  labels:
+    app: back
+spec:
+  selector:
+    matchLabels:
+      app: back
+  template:
+    metadata:
+      labels:
+        app: back
+    spec:
+      containers:
+        - name: back
+          image: ministrkaiffa/sber-hw21-back
+          ports:
+            - containerPort: 8080
+              name: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: back
+  name: svc-back
+spec:
+  selector:
+    app: back
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  type: LoadBalancer
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  labels:
+    app: back
+  name: test-back
+spec:
+  rules:
+    - http:
+        paths:
+          - backend:
+              service:
+                name: svc-back
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: ingress-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: back
+spec:
+  hosts:
+    - "*"
+  gateways:
+    - ingress-gateway
+  http:
+    - route:
+        - destination:
+            host: svc-back
+            port:
+              number: 8080
